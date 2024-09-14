@@ -39,7 +39,7 @@ st.markdown("""
 
 
 def classificationprediction(input_data):
-    with open(r"C:\My Folder\Tuts\Python\Project\Project 5 - Final Project\Vaccine Usage Prediction\Vaccine Usage Prediction\Vaccine_Usage_Prediction_Model.pkl", "rb") as f:
+    with open("Vaccine_Usage_Prediction_Model.pkl", "rb") as f:
         model = joblib.load(f)
         # model predict the vaccine usage based on user input
         y_predict = model.predict(input_data)
@@ -131,7 +131,7 @@ if Selected_Option == "Analysis":
     st.write('')
     st.title('H1N1 Survey Data Visualization')
     
-    df = pd.read_csv(r"C:\My Folder\Tuts\Python\Project\Project 5 - Final Project\Vaccine Usage Prediction\Dataset\vaccine_dataset.csv")
+    df = pd.read_csv("vaccine_dataset.csv")
 
     col1, col2, col3, col4, col5 = st.columns([3,3,3,3,3])
     with col1:
