@@ -39,7 +39,7 @@ st.markdown("""
 
 
 def classificationprediction(input_data):
-    with open("Vaccine_Usage_Prediction_Model.pkl", "rb") as f:
+    with open(r"C:\My Folder\Tuts\Python\Project\Project 5 - Final Project\Vaccine Usage Prediction\Vaccine Usage Prediction\Vaccine_Usage_Prediction_Model.pkl", "rb") as f:
         model = joblib.load(f)
         # model predict the vaccine usage based on user input
         y_predict = model.predict(input_data)
@@ -131,7 +131,7 @@ if Selected_Option == "Analysis":
     st.write('')
     st.title('H1N1 Survey Data Visualization')
     
-    df = pd.read_csv("vaccine_dataset.csv")
+    df = pd.read_csv(r"C:\My Folder\Tuts\Python\Project\Project 5 - Final Project\Vaccine Usage Prediction\Dataset\vaccine_dataset.csv")
 
     col1, col2, col3, col4, col5 = st.columns([3,3,3,3,3])
     with col1:
@@ -164,7 +164,7 @@ if Selected_Option == "Analysis":
 
     data = df.copy()
 
-    chart_type = st.sidebar.selectbox('Select Chart Type:', ['Univariate', 'Bivariate'])
+    chart_type = st.sidebar.selectbox('Select Chart Type:', ['Univariate', 'Bivariate', 'Multivariate'])
 
     # Univariate Charts
     if chart_type == 'Univariate':
@@ -196,7 +196,7 @@ if Selected_Option == "Analysis":
         elif univariate_chart_type == 'Count Plot':
             st.header('Count Plot')
             column = st.sidebar.selectbox('Select column for Count Plot:', data.columns)
-            fig, ax = plt.subplots(figsize=(chart_width/100, chart_height/100))
+            fig, ax = plt.subplots(figsize=((chart_width/100)-2, (chart_height/100)-2))
             sns.countplot(data=data, x=column, ax=ax)
             for p in ax.patches:
                 ax.annotate(f'{p.get_height()}', (p.get_x() + p.get_width() / 2., p.get_height()), ha='center', va='baseline')
@@ -205,43 +205,130 @@ if Selected_Option == "Analysis":
 
     # Bivariate Charts
     elif chart_type == 'Bivariate':
-        st.header('Bivariate Charts')
-        # chart_choice = st.sidebar.selectbox('Select Bivariate Chart Type:', ['Scatter Plot', 'Line Plot', 'Bar Chart'])
-        chart_choice = st.sidebar.selectbox('Select Bivariate Chart Type:', ['Scatter Plot', 'Bar Chart'])
+        try:
+            st.header('Bivariate Charts')
+            # chart_choice = st.sidebar.selectbox('Select Bivariate Chart Type:', ['Scatter Plot', 'Line Plot', 'Bar Chart'])
+            chart_choice = st.sidebar.selectbox('Select Bivariate Chart Type:', ['Scatter Plot', 'Bar Chart', 'Heat Map', 'Line Plot'])
+            chart_width = st.sidebar.slider('Select Chart Width:', 400, 800, 600)
+            chart_height = st.sidebar.slider('Select Chart Height:', 400, 800, 600)
+
+            # Scatter Plot
+            if chart_choice == 'Scatter Plot':
+                # x_column = st.sidebar.selectbox('Select X column:', data.columns)
+                # y_column = st.sidebar.selectbox('Select Y column:', data.columns)
+                x_column = st.sidebar.selectbox('Select X column:', data.columns, index=0)  # First column by iloc[0]
+                y_column = st.sidebar.selectbox('Select Y column:', data.columns, index=1)  # Second column by iloc[1]
+
+                grouped_data = data.groupby([x_column, y_column]).size().reset_index(name='counts_new')
+                fig = px.scatter(grouped_data, x=x_column, y=y_column, size='counts_new', hover_data=['counts_new'], width=chart_width, height=chart_height)
+                # st.plotly_chart(fig)
+                
+                # fig = px.scatter(data, x=x_column, y=y_column, width=chart_width, height=chart_height)
+                fig.update_traces(textposition='top center')
+                st.plotly_chart(fig)
+
+            # Line Plot
+            elif chart_choice == 'Line Plot':
+                # x_column = st.sidebar.selectbox('Select X column:', data.columns, index = 0)
+                # y_column = st.sidebar.selectbox('Select Y column:', data.columns, index = 1)
+
+                integer_columns = data.select_dtypes(include=['int64', 'int32']).columns
+                non_integer_columns = data.select_dtypes(exclude=['int64', 'int32']).columns
+
+                if len(non_integer_columns) > 0:
+                    x_column = st.sidebar.selectbox('Select X column:', non_integer_columns)
+                else:
+                    st.warning("No non-integer columns available for X column.")                
+
+                if len(integer_columns) > 0:
+                    y_column = st.sidebar.selectbox('Select Y column:', integer_columns, index=1)
+                else:
+                    st.warning("No integer columns available for Y column.")
+
+                color = st.sidebar.selectbox('Select Color:', data.columns, index = 3)
+                grouped_data = data.groupby([x_column, color])[y_column].mean().reset_index()
+                fig = px.line(
+                    grouped_data, x=x_column, y=y_column, color=color,  # Use color to differentiate groups
+                    width=chart_width, height=chart_height
+                )
+                fig.update_traces(textposition='top center')
+                st.plotly_chart(fig)
+            
+            # Bar Chart
+            elif chart_choice == 'Bar Chart':
+                x_column = st.sidebar.selectbox('Select X column:', data.columns, index=0)
+                y_column = st.sidebar.selectbox('Select Y column:', data.columns, index=1)
+                # fig = px.bar(data, x=x_column, y=y_column, text=y_column, width=chart_width, height=chart_height)
+                # fig.update_traces(texttemplate='%{text}', textposition='outside')
+                # st.plotly_chart(fig)
+
+                grouped_data = data.groupby([x_column, y_column]).size().reset_index(name='counts_new')
+                # Plot using 'counts'
+                fig = px.bar(grouped_data, x=x_column, y='counts_new', color=y_column, text='counts_new', width=chart_width, height=chart_height)
+                # Update text position
+                fig.update_traces(texttemplate='%{text}', textposition='outside')
+                # Display the plot
+                st.plotly_chart(fig)
+
+            elif chart_choice == 'Heat Map':
+                x_column = st.sidebar.selectbox('Select X column:', data.columns, index=0)
+                y_column = st.sidebar.selectbox('Select Y column:', data.columns, index=1)
+                pivot_table = data.groupby([x_column, y_column]).size().unstack(fill_value=0)
+                fig = px.imshow(pivot_table, text_auto=True)
+                st.plotly_chart(fig)
+        except:
+            # st.error('Same variable selection for both x and y axis will not be allowed. Use Different variables for both x and y axis')
+            st.markdown(
+                """<p style="background-color:red; color:white; font-size:20px; padding:10px; border-radius:5px;">
+                Same variable selection for both x and y axis will not be allowed. Use different variables for both x and y axis.</p>""",
+                unsafe_allow_html=True
+            )
+
+
+    elif chart_type == 'Multivariate':
+        st.header('Multivariate Charts')
+        # Multivariate scatter plot with color and size encoding
+        x_column = st.sidebar.selectbox('Select X column:', data.columns, index = 0)
+        y_column = st.sidebar.selectbox('Select Y column:', data.columns, index = 1)
+        color_column = st.sidebar.selectbox('Select color column:', data.columns, index = 2)
+        size_column = st.sidebar.selectbox('Select size column:', data.columns, index = 3)
         chart_width = st.sidebar.slider('Select Chart Width:', 400, 800, 600)
         chart_height = st.sidebar.slider('Select Chart Height:', 400, 800, 600)
+        try:
+            grouped_data = data.groupby([x_column, y_column, color_column, size_column]).size().reset_index(name='counts')
+            fig = px.scatter(
+                grouped_data, x=x_column, y=y_column, 
+                color=color_column, size='counts',  # Use the counts as the size
+                width=chart_width, height=chart_height,
+                hover_data=grouped_data.columns
+            )
 
-        # Scatter Plot
-        if chart_choice == 'Scatter Plot':
-            x_column = st.sidebar.selectbox('Select X column:', data.columns)
-            y_column = st.sidebar.selectbox('Select Y column:', data.columns)
-            fig = px.scatter(data, x=x_column, y=y_column, width=chart_width, height=chart_height)
-            fig.update_traces(textposition='top center')
-            st.plotly_chart(fig)
+            st.plotly_chart(fig)        
+        except:
+            # st.error('Please select different columns to display chart for Multivarite Analysis')
+            st.markdown(
+                """<p style="background-color:red; color:white; font-size:20px; padding:10px; border-radius:5px;">
+                Same variable selection for Multivariate will not be allowed. Please use different variables.</p>""",
+                unsafe_allow_html=True
+            )
 
-        # Line Plot
-        # elif chart_choice == 'Line Plot':
-        #     x_column = st.sidebar.selectbox('Select X column:', data.columns)
-        #     y_column = st.sidebar.selectbox('Select Y column:', data.columns)
-        #     fig = px.line(data, x=x_column, y=y_column, width=chart_width, height=chart_height)
-        #     fig.update_traces(textposition='top center')
-        #     st.plotly_chart(fig)
-        
-        # Bar Chart
-        elif chart_choice == 'Bar Chart':
-            x_column = st.sidebar.selectbox('Select X column:', data.columns)
-            y_column = st.sidebar.selectbox('Select Y column:', data.columns)
-            fig = px.bar(data, x=x_column, y=y_column, text=y_column, width=chart_width, height=chart_height)
-            fig.update_traces(texttemplate='%{text}', textposition='outside')
-            st.plotly_chart(fig)
 
-    # Additional visualizations
+
     st.sidebar.header('Additional Settings')
+
     if st.sidebar.checkbox('Show Pairplot'):
         st.header('Pairplot')
-        fig = sns.pairplot(data, kind='scatter', plot_kws={'alpha': 0.5})
-        st.pyplot(fig)
 
+        # You can optionally let the user select a hue for categorical coloring
+        hue_column = st.sidebar.selectbox('Select hue column (optional):', [None] + list(data.columns))
+
+        # If the user selects a hue, apply it
+        if hue_column and hue_column != 'None':
+            fig = sns.pairplot(data, kind='scatter', plot_kws={'alpha': 0.5}, hue=hue_column)
+        else:
+            fig = sns.pairplot(data, kind='scatter', plot_kws={'alpha': 0.5})
+
+        st.pyplot(fig)
 
 
 if Selected_Option == "Prediction":
